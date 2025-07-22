@@ -53,20 +53,30 @@
     .popped-name {
       position: absolute;
       color: #fff;
-      background: #0008;
+      background: #000b;
       border-radius: 1em;
-      font-size: clamp(2rem, 8vw, 5rem);
-      font-weight: bold;
-      padding: 0.5em 1em;
-      box-shadow: 0 2px 18px #0006;
+      font-size: clamp(1.1rem, 3vw, 2.1rem);
+      font-weight: normal;
+      padding: 0.3em 0.8em;
+      box-shadow: 0 2px 14px #0004;
       opacity: 1;
-      animation: fadePop 0.25s linear;
+      animation: fadePop 0.5s linear;
       user-select: none;
       pointer-events: none;
+      transition: font-size 0.2s, font-weight 0.2s;
+      /* Sharper look: remove bold, smaller font */
+      letter-spacing: 0.01em;
+      border: 1.5px solid #fff5;
+    }
+    .winner-full {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      z-index: 99;
+      background: inherit;
+      pointer-events: auto;
     }
     .winner {
-      position: fixed;
-      top: 50%; left: 50%; transform: translate(-50%,-50%);
       color: #fff;
       background: linear-gradient(90deg,#faad14,#f5222d,#1890ff 70%);
       font-size: clamp(2.5rem, 10vw, 7rem);
@@ -74,13 +84,32 @@
       border-radius: 30px;
       padding: 0.4em 1.2em;
       font-weight: bold;
-      z-index: 90;
       box-shadow: 0 4px 48px #000d;
       text-shadow: 0 2px 24px #000c;
       animation: flash 1s infinite alternate;
-      cursor: pointer;
-      pointer-events: auto;
       user-select: none;
+      margin-bottom: 32px;
+      position: relative;
+    }
+    .winner-back-btn {
+      position: absolute;
+      top: 18px; right: 32px;
+      background: rgba(0,0,0,0.18);
+      color: #fff;
+      border: none;
+      border-radius: 20px;
+      font-size: 1.1rem;
+      padding: 7px 18px;
+      z-index: 110;
+      cursor: pointer;
+      opacity: 0.7;
+      transition: opacity 0.2s;
+      font-weight: normal;
+      box-shadow: 0 2px 12px #0002;
+    }
+    .winner-back-btn:hover {
+      opacity: 1;
+      background: rgba(0,0,0,0.31);
     }
     .timer {
       position: fixed; top: 18px; right: 32px;
@@ -91,8 +120,8 @@
       pointer-events: none;
     }
     @keyframes fadePop {
-      0% { opacity: 0; transform: scale(0.8) rotate(var(--deg, 0deg)); }
-      60% { opacity: 1; transform: scale(1.12) rotate(var(--deg, 0deg)); }
+      0% { opacity: 0; transform: scale(0.85) rotate(var(--deg, 0deg)); }
+      60% { opacity: 1; transform: scale(1.10) rotate(var(--deg, 0deg)); }
       100% { opacity: 1; transform: scale(1) rotate(var(--deg, 0deg)); }
     }
     @keyframes flash {
@@ -142,6 +171,7 @@
     </div>
   </div>
   <div id="display-area" class="display-area" style="display:none;"></div>
+  <div id="winner-full" class="winner-full" style="display:none;"></div>
   <script>
     // Helpers
     const $ = sel => document.querySelector(sel);
@@ -159,6 +189,7 @@
     let popId = null;
     let winner = null;
     let bgImage = "";
+    let popNameTimeouts = [];
 
     // Elements
     const $nameList = $("#name-list");
@@ -167,6 +198,7 @@
     const $stop = $("#stop-btn");
     const $reset = $("#reset-btn");
     const $display = $("#display-area");
+    const $winnerFull = $("#winner-full");
     const $loadedCount = $("#loaded-count");
     const $duration = $("#duration-input");
     const $bgInput = $("#bg-input");
@@ -256,11 +288,11 @@
     };
 
     // Fullscreen helpers
-    function enterFullscreen() {
-      if ($display.requestFullscreen) $display.requestFullscreen();
-      else if ($display.webkitRequestFullscreen) $display.webkitRequestFullscreen();
-      else if ($display.mozRequestFullScreen) $display.mozRequestFullScreen();
-      else if ($display.msRequestFullscreen) $display.msRequestFullscreen();
+    function enterFullscreen(el) {
+      if (el.requestFullscreen) el.requestFullscreen();
+      else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+      else if (el.mozRequestFullScreen) el.mozRequestFullScreen();
+      else if (el.msRequestFullscreen) el.msRequestFullscreen();
     }
     function exitFullscreen() {
       if (document.exitFullscreen) document.exitFullscreen();
@@ -289,7 +321,8 @@
       $stop.disabled = false;
       $reset.disabled = true;
       showDisplayArea();
-      enterFullscreen();
+      $winnerFull.style.display = "none";
+      enterFullscreen($display);
       // Timer
       showTimer();
       timerId = setInterval(() => {
@@ -314,7 +347,6 @@
       hidePoppedName();
       setTimeout(() => {
         pickWinner();
-        exitFullscreen();
       }, 400);
     }
     function reset() {
@@ -324,6 +356,7 @@
       $stop.disabled = true;
       $reset.disabled = false;
       hideDisplayArea();
+      $winnerFull.style.display = "none";
     }
 
     function showDisplayArea() {
@@ -334,25 +367,36 @@
     function hideDisplayArea() {
       $display.style.display = "none";
       $display.innerHTML = '';
+      popNameTimeouts.forEach(timeout => clearTimeout(timeout));
+      popNameTimeouts = [];
     }
     function showPoppedName(name) {
-      let $name = $display.querySelector(".popped-name");
-      if (!$name) {
-        $name = document.createElement("div");
-        $name.className = "popped-name";
-        $display.appendChild($name);
-      }
-      const pos = randomPos();
+      // Remove any expired popped names
+      Array.from($display.querySelectorAll(".popped-name")).forEach(el => {
+        if (!el.dataset.expiry || Date.now() > parseInt(el.dataset.expiry)) {
+          el.remove();
+        }
+      });
+      // New one
+      const $name = document.createElement("div");
+      $name.className = "popped-name";
       $name.textContent = name;
+      const pos = randomPos();
       $name.style.top = pos.top;
       $name.style.left = pos.left;
       $name.style.transform = `rotate(${pos.rotate})`;
+      $name.dataset.expiry = Date.now() + 500; // 0.5s
+      $display.appendChild($name);
+      // Remove after 0.5s
+      const timeout = setTimeout(() => {
+        $name.remove();
+      }, 500);
+      popNameTimeouts.push(timeout);
     }
     function hidePoppedName() {
-      const $name = $display.querySelector(".popped-name");
-      if ($name) $name.remove();
-      const $timer = $display.querySelector(".timer");
-      if ($timer) $timer.remove();
+      $display.innerHTML = '';
+      popNameTimeouts.forEach(timeout => clearTimeout(timeout));
+      popNameTimeouts = [];
     }
     function showTimer() {
       let $timer = $display.querySelector(".timer");
@@ -363,16 +407,32 @@
       }
       $timer.textContent = countdown+"s";
     }
+
     function pickWinner() {
       winner = randomFromArray(names);
+      // Keep fullscreen, but show winner in separate overlay
+      $display.style.display = "none";
+      $winnerFull.style.display = "";
+      $winnerFull.innerHTML = '';
+
+      $winnerFull.style.background = bgImage ? `url('${bgImage}') center/cover no-repeat` : "rgba(16,28,44,0.9)";
+
+      // Back button
+      const $back = document.createElement("button");
+      $back.className = "winner-back-btn";
+      $back.textContent = "Back";
+      $back.onclick = function() {
+        $winnerFull.style.display = "none";
+        exitFullscreen();
+        reset();
+      };
+      $winnerFull.appendChild($back);
+
+      // Winner banner
       const $winner = document.createElement("div");
       $winner.className = "winner";
-      $winner.innerHTML = `🎉 Winner: ${winner} 🎉<div style="font-size:18px;margin-top:12px;color:#fff;"><i>(Click to dismiss)</i></div>`;
-      $winner.onclick = function() {
-        reset();
-        hideDisplayArea();
-      };
-      $display.appendChild($winner);
+      $winner.innerHTML = `🎉 Winner: ${winner} 🎉`;
+      $winnerFull.appendChild($winner);
     }
 
     // Button events
