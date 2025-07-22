@@ -26,7 +26,7 @@
       position: relative;
       z-index: 10;
     }
-    .controls button {
+    .controls button, .controls select {
       margin: 8px 8px 0 0;
       padding: 10px 20px;
       border-radius: 6px;
@@ -42,6 +42,17 @@
       background: #888;
       cursor: default;
     }
+    .controls select {
+      background: #fafafa;
+      color: #111;
+      padding: 9px 12px;
+      font-weight: normal;
+      margin: 8px 8px 0 0;
+      border: 1.5px solid #bbb;
+    }
+    .controls label {
+      font-weight: normal;
+    }
     .display-area {
       position: fixed;
       top: 0; left: 0; width: 100vw; height: 100vh;
@@ -49,11 +60,12 @@
       z-index: 30;
       background: rgba(255,255,255,0.9);
       pointer-events: none;
+      transition: background 0.3s;
     }
     .popped-name {
       position: absolute;
-      color: #111;
-      background: #fff;
+      background: var(--pop-bg, #fff);
+      color: var(--pop-color, #111);
       border-radius: 1em;
       font-size: clamp(1.1rem, 3vw, 2.1rem);
       font-weight: normal;
@@ -63,7 +75,7 @@
       animation: fadePop 0.5s linear;
       user-select: none;
       pointer-events: none;
-      transition: font-size 0.2s, font-weight 0.2s;
+      transition: font-size 0.2s, font-weight 0.2s, background 0.3s, color 0.3s;
       letter-spacing: 0.01em;
       border: 1.5px solid #2222;
     }
@@ -75,12 +87,13 @@
       align-items: center;
       justify-content: center;
       z-index: 99;
-      background: #fff;
+      background: var(--winner-bg, #fff);
       pointer-events: auto;
+      transition: background 0.3s;
     }
     .winner-banner {
-      color: #111;
-      background: #fff;
+      background: var(--winner-banner-bg, #fff);
+      color: var(--winner-banner-color, #111);
       border: 4px solid #111;
       border-radius: 25px;
       min-width: 320px;
@@ -99,6 +112,7 @@
       position: relative;
       animation: winnerPop 0.7s;
       user-select: none;
+      transition: background 0.3s, color 0.3s;
     }
     @keyframes winnerPop {
       0% { opacity: 0; transform: scale(0.8);}
@@ -147,12 +161,26 @@
     .background-preview {
       max-width: 100%; max-height: 130px; margin-top: 8px; border-radius: 8px; box-shadow: 0 2px 12px #0002;
       display: block;
+      object-fit: cover;
+    }
+    .page-title {
+      text-align: center;
+      font-size: 2.5rem;
+      font-weight: bold;
+      margin: 28px 0 4px 0;
+      letter-spacing: 0.04em;
+      transition: color 0.3s;
     }
   </style>
 </head>
 <body>
+  <div id="page-title" class="page-title">Random Name Picker</div>
   <div class="controls">
-    <h2>Random Name Picker</h2>
+    <div style="margin-bottom: 12px;">
+      <label><b>Page Title: </b>
+        <select id="title-select"></select>
+      </label>
+    </div>
     <div style="margin-bottom: 16px;">
       <label><b>Import Excel: </b>
         <input type="file" accept=".xlsx,.xls" id="excel-input">
@@ -163,10 +191,9 @@
       <textarea id="name-list" rows="5" style="width:100%;margin-top:8px;font-size:16px;border-radius:8px;padding:8px;" placeholder="Enter names, one per line..."></textarea>
     </div>
     <div style="margin-top: 14px;">
-      <b>Background image: </b>
-      <input type="file" accept="image/*" id="bg-input">
-      <button id="remove-bg" style="background:#d32f2f;display:none;">Remove</button>
-      <img id="bg-preview" class="background-preview" style="display:none;">
+      <b>Choose Background: </b>
+      <select id="bg-dropdown"></select>
+      <div id="bg-preview-area" style="margin-top:8px;min-height:30px;"></div>
     </div>
     <div style="margin-top:20px;">
       <button id="start-btn">Start</button>
@@ -185,13 +212,44 @@
   <div id="display-area" class="display-area" style="display:none;"></div>
   <div id="winner-full" class="winner-full" style="display:none;"></div>
   <script>
+    // Title options
+    const TITLE_OPTIONS = [
+      "Random Name Picker",
+      "Lucky Draw",
+      "Prize Winner",
+      "Raffle Selector",
+      "Who is Next?",
+      "Today's Winner",
+      "Wheel of Names",
+      "Team Draw",
+      "Giveaway Winner",
+      "🎉 Special Draw 🎉"
+    ];
+
+    // Preset backgrounds (match your /images/ files)
+    const PRESET_BACKGROUNDS = [
+      {name: "None", url: null},
+      {name: "Race One", url: "images/raceone_backgound.png"},
+      {name: "SSS", url: "images/sss_backgound.png"},
+      {name: "Warw", url: "images/warw_backgound.png"}
+    ];
+
+    // Helper for colored text on backgrounds
+    function isBgDark(bgIdx) {
+      // Basic: treat everything as light except fallback for future dark images
+      // You can improve this by flag or filename
+      return false;
+    }
+
     // Helpers
     const $ = sel => document.querySelector(sel);
     const LS = {
-      names: "winner_names",
-      bg: "winner_bg",
-      duration: "winner_duration"
+      names: "winner_names_v2",
+      bgIndex: "winner_bg_idx",
+      duration: "winner_duration_v2",
+      title: "winner_title_v2"
     };
+
     // State
     let names = [];
     let duration = 20;
@@ -200,10 +258,13 @@
     let timerId = null;
     let popId = null;
     let winner = null;
-    let bgImage = "";
     let popNameTimeouts = [];
+    let bgIndex = 0;
+    let titleIdx = 0;
 
     // Elements
+    const $titleSelect = $("#title-select");
+    const $pageTitle = $("#page-title");
     const $nameList = $("#name-list");
     const $excel = $("#excel-input");
     const $start = $("#start-btn");
@@ -213,37 +274,102 @@
     const $winnerFull = $("#winner-full");
     const $loadedCount = $("#loaded-count");
     const $duration = $("#duration-input");
-    const $bgInput = $("#bg-input");
-    const $bgPreview = $("#bg-preview");
-    const $removeBg = $("#remove-bg");
+    const $bgDropdown = $("#bg-dropdown");
+    const $bgPreviewArea = $("#bg-preview-area");
 
-    // Load from localStorage
+    // ---- Title dropdown ----
+    function renderTitleDropdown() {
+      $titleSelect.innerHTML = "";
+      TITLE_OPTIONS.forEach((t, i) => {
+        let opt = document.createElement("option");
+        opt.value = i;
+        opt.textContent = t;
+        $titleSelect.appendChild(opt);
+      });
+      $titleSelect.value = titleIdx;
+    }
+    $titleSelect.onchange = function() {
+      titleIdx = parseInt($titleSelect.value);
+      $pageTitle.textContent = TITLE_OPTIONS[titleIdx];
+      localStorage.setItem(LS.title, titleIdx);
+    };
+
+    // ---- Backgrounds dropdown ----
+    function renderBgDropdown() {
+      $bgDropdown.innerHTML = "";
+      PRESET_BACKGROUNDS.forEach((bg, i) => {
+        let opt = document.createElement("option");
+        opt.value = i;
+        opt.textContent = bg.name;
+        $bgDropdown.appendChild(opt);
+      });
+      $bgDropdown.value = bgIndex;
+      renderBgPreview();
+      updateBgTheme();
+    }
+    $bgDropdown.onchange = function() {
+      bgIndex = parseInt($bgDropdown.value);
+      localStorage.setItem(LS.bgIndex, bgIndex);
+      renderBgPreview();
+      updateBgTheme();
+    };
+
+    function renderBgPreview() {
+      $bgPreviewArea.innerHTML = "";
+      let bg = PRESET_BACKGROUNDS[bgIndex];
+      if (bg && bg.url) {
+        let img = document.createElement("img");
+        img.src = bg.url;
+        img.className = "background-preview";
+        img.alt = bg.name;
+        $bgPreviewArea.appendChild(img);
+      }
+    }
+
+    // ---- Text color optimization ----
+    function updateBgTheme() {
+      let bg = PRESET_BACKGROUNDS[bgIndex];
+      let isDark = isBgDark(bgIndex);
+      // Page
+      if (bg && bg.url) {
+        document.body.style.background = `url('${bg.url}') center/cover no-repeat`;
+      } else {
+        document.body.style.background = "#fff";
+      }
+      document.body.style.color = isDark ? "#fff" : "#111";
+      $pageTitle.style.color = isDark ? "#fff" : "#111";
+      document.documentElement.style.setProperty("--winner-bg", bg && bg.url ? `url('${bg.url}') center/cover no-repeat` : "#fff");
+      document.documentElement.style.setProperty("--winner-banner-bg", isDark ? "#222" : "#fff");
+      document.documentElement.style.setProperty("--winner-banner-color", isDark ? "#fff" : "#111");
+      document.documentElement.style.setProperty("--pop-bg", isDark ? "#222" : "#fff");
+      document.documentElement.style.setProperty("--pop-color", isDark ? "#fff" : "#111");
+    }
+
+    // ---- Persistence ----
     function loadPersisted() {
       try {
         names = JSON.parse(localStorage.getItem(LS.names)) || [];
       } catch { names = []; }
-      bgImage = localStorage.getItem(LS.bg) || "";
+      bgIndex = parseInt(localStorage.getItem(LS.bgIndex)) || 0;
       duration = Number(localStorage.getItem(LS.duration)) || 20;
+      titleIdx = parseInt(localStorage.getItem(LS.title)) || 0;
       $nameList.value = names.join("\n");
       $duration.value = duration;
       $loadedCount.textContent = names.length;
-      if(bgImage) {
-        document.body.style.background = `url('${bgImage}') center/cover no-repeat`;
-        $bgPreview.src = bgImage;
-        $bgPreview.style.display = "";
-        $removeBg.style.display = "";
-      }
+      $pageTitle.textContent = TITLE_OPTIONS[titleIdx];
+      renderTitleDropdown();
+      renderBgDropdown();
     }
     loadPersisted();
 
-    // Save to localStorage
     function persist() {
       localStorage.setItem(LS.names, JSON.stringify(names));
-      localStorage.setItem(LS.bg, bgImage || "");
+      localStorage.setItem(LS.bgIndex, bgIndex);
       localStorage.setItem(LS.duration, duration);
+      localStorage.setItem(LS.title, titleIdx);
     }
 
-    // Excel import
+    // ---- Excel import ----
     $excel.onchange = e => {
       const file = e.target.files[0];
       if (!file) return;
@@ -263,43 +389,20 @@
       reader.readAsBinaryString(file);
     };
 
-    // Manual entry
+    // ---- Manual entry ----
     $nameList.oninput = e => {
       names = $nameList.value.split("\n").map(x => x.trim()).filter(x => x);
       $loadedCount.textContent = names.length;
       persist();
     };
 
-    // Background image
-    $bgInput.onchange = e => {
-      const file = e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = evt => {
-        bgImage = evt.target.result;
-        document.body.style.background = `url('${bgImage}') center/cover no-repeat`;
-        $bgPreview.src = bgImage;
-        $bgPreview.style.display = "";
-        $removeBg.style.display = "";
-        persist();
-      };
-      reader.readAsDataURL(file);
-    };
-    $removeBg.onclick = () => {
-      bgImage = "";
-      document.body.style.background = "#fff";
-      $bgPreview.style.display = "none";
-      $removeBg.style.display = "none";
-      persist();
-    };
-
-    // Duration
+    // ---- Duration ----
     $duration.oninput = e => {
       duration = Math.max(5, Math.min(90, Number($duration.value)));
       persist();
     };
 
-    // Fullscreen helpers
+    // ---- Fullscreen helpers ----
     function enterFullscreen(el) {
       if (el.requestFullscreen) el.requestFullscreen();
       else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
@@ -313,7 +416,7 @@
       else if (document.msExitFullscreen) document.msExitFullscreen();
     }
 
-    // Utility
+    // ---- Utility ----
     function randomFromArray(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
     function randomPos() {
       return {
@@ -323,7 +426,7 @@
       };
     }
 
-    // Main logic
+    // ---- Main logic ----
     function start() {
       if (names.length < 2) return alert("Please provide at least two names.");
       running = true;
@@ -335,7 +438,6 @@
       showDisplayArea();
       $winnerFull.style.display = "none";
       enterFullscreen($display);
-      // Timer
       showTimer();
       timerId = setInterval(() => {
         countdown--;
@@ -344,7 +446,6 @@
           stop();
         }
       }, 1000);
-      // Popping animation
       popId = setInterval(() => {
         showPoppedName(randomFromArray(names));
       }, 70);
@@ -373,7 +474,8 @@
 
     function showDisplayArea() {
       $display.style.display = "";
-      $display.style.background = bgImage ? `url('${bgImage}') center/cover no-repeat` : "rgba(255,255,255,0.9)";
+      let bg = PRESET_BACKGROUNDS[bgIndex];
+      $display.style.background = bg && bg.url ? `url('${bg.url}') center/cover no-repeat` : "rgba(255,255,255,0.9)";
       $display.innerHTML = '';
     }
     function hideDisplayArea() {
@@ -398,6 +500,9 @@
       $name.style.left = pos.left;
       $name.style.transform = `rotate(${pos.rotate})`;
       $name.dataset.expiry = Date.now() + 500; // 0.5s
+      let isDark = isBgDark(bgIndex);
+      $name.style.setProperty('--pop-bg', isDark ? '#222' : '#fff');
+      $name.style.setProperty('--pop-color', isDark ? '#fff' : '#111');
       $display.appendChild($name);
       // Remove after 0.5s
       const timeout = setTimeout(() => {
@@ -422,18 +527,19 @@
 
     function pickWinner() {
       winner = randomFromArray(names);
-      // Keep fullscreen, but show winner in separate overlay
       $display.style.display = "none";
       $winnerFull.style.display = "";
       $winnerFull.innerHTML = '';
-
-      $winnerFull.style.background = bgImage ? `url('${bgImage}') center/cover no-repeat` : "#fff";
-
+      let bg = PRESET_BACKGROUNDS[bgIndex];
+      let isDark = isBgDark(bgIndex);
+      $winnerFull.style.background = bg && bg.url ? `url('${bg.url}') center/cover no-repeat` : "#fff";
+      $winnerFull.style.setProperty('--winner-bg', $winnerFull.style.background);
       // Winner banner
       const $winnerBanner = document.createElement("div");
       $winnerBanner.className = "winner-banner";
       $winnerBanner.innerHTML = `🎉 Winner: ${winner} 🎉`;
-
+      $winnerBanner.style.background = isDark ? "#222" : "#fff";
+      $winnerBanner.style.color = isDark ? "#fff" : "#111";
       // Back button
       const $back = document.createElement("button");
       $back.className = "winner-back-btn";
@@ -455,6 +561,11 @@
 
     // Initial state
     reset();
+
+    // First render for title and backgrounds
+    renderTitleDropdown();
+    renderBgDropdown();
+    updateBgTheme();
   </script>
 </body>
 </html>
