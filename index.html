@@ -56,11 +56,26 @@
     .display-area {
       position: fixed;
       top: 0; left: 0; width: 100vw; height: 100vh;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
       z-index: 30;
       background: rgba(255,255,255,0.9);
       pointer-events: none;
       transition: background 0.3s;
+    }
+    .banner-title {
+      width: 100vw;
+      text-align: center;
+      font-size: 2.2rem;
+      font-weight: bold;
+      background: #111;
+      color: #fff;
+      padding: 18px 0 14px 0;
+      letter-spacing: 0.04em;
+      z-index: 100;
+      box-shadow: 0 2px 18px #0002;
+      margin-bottom: 32px;
+      position: relative;
+      user-select: none;
     }
     .popped-name {
       position: absolute;
@@ -72,7 +87,7 @@
       padding: 0.3em 0.8em;
       box-shadow: 0 2px 14px #0002;
       opacity: 1;
-      animation: fadePop 0.5s linear;
+      animation: fadePop 0.7s linear;
       user-select: none;
       pointer-events: none;
       transition: font-size 0.2s, font-weight 0.2s, background 0.3s, color 0.3s;
@@ -85,7 +100,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
+      justify-content: flex-start;
       z-index: 99;
       background: var(--winner-bg, #fff);
       pointer-events: auto;
@@ -103,7 +118,7 @@
       font-weight: bold;
       box-shadow: 0 6px 40px #0002;
       text-align: center;
-      margin-bottom: 32px;
+      margin: 50px 0 32px 0;
       letter-spacing: 0.04em;
       display: flex;
       flex-direction: column;
@@ -113,6 +128,21 @@
       animation: winnerPop 0.7s;
       user-select: none;
       transition: background 0.3s, color 0.3s;
+    }
+    .winner-title-banner {
+      width: 100vw;
+      text-align: center;
+      font-size: 2.2rem;
+      font-weight: bold;
+      background: #111;
+      color: #fff;
+      padding: 18px 0 14px 0;
+      letter-spacing: 0.04em;
+      z-index: 100;
+      box-shadow: 0 2px 18px #0002;
+      margin-bottom: 32px;
+      position: relative;
+      user-select: none;
     }
     @keyframes winnerPop {
       0% { opacity: 0; transform: scale(0.8);}
@@ -157,6 +187,7 @@
       .controls { padding: 12px !important; }
       .winner-banner { font-size: 1.7rem !important; min-width: 140px; }
       .winner-back-btn { top: -40px; right: 0;}
+      .banner-title, .winner-title-banner { font-size: 1.3rem !important; padding: 12px 0 10px 0; }
     }
     .background-preview {
       max-width: 100%; max-height: 130px; margin-top: 8px; border-radius: 8px; box-shadow: 0 2px 12px #0002;
@@ -170,11 +201,12 @@
       margin: 28px 0 4px 0;
       letter-spacing: 0.04em;
       transition: color 0.3s;
+      display: none;
     }
   </style>
 </head>
 <body>
-  <div id="page-title" class="page-title">Shaw & Partners Ski Draw</div>
+  <div id="page-title" class="page-title"></div>
   <div class="controls">
     <div style="margin-bottom: 12px;">
       <label><b>Page Title: </b>
@@ -233,14 +265,10 @@
       {name: "Warw", url: "images/warw_backgound.png"}
     ];
 
-    // Helper for colored text on backgrounds
     function isBgDark(bgIdx) {
-      // Basic: treat everything as light except fallback for future dark images
-      // You can improve this by flag or filename
       return false;
     }
 
-    // Helpers
     const $ = sel => document.querySelector(sel);
     const LS = {
       names: "winner_names_v2",
@@ -249,7 +277,6 @@
       title: "winner_title_v2"
     };
 
-    // State
     let names = [];
     let duration = 20;
     let running = false;
@@ -261,7 +288,6 @@
     let bgIndex = 0;
     let titleIdx = 0;
 
-    // Elements
     const $titleSelect = $("#title-select");
     const $pageTitle = $("#page-title");
     const $nameList = $("#name-list");
@@ -279,12 +305,15 @@
     // ---- Title dropdown ----
     function renderTitleDropdown() {
       $titleSelect.value = titleIdx;
+      $pageTitle.textContent = TITLE_OPTIONS[titleIdx];
+      document.title = TITLE_OPTIONS[titleIdx];
     }
     $titleSelect.onchange = function() {
       titleIdx = parseInt($titleSelect.value);
       $pageTitle.textContent = TITLE_OPTIONS[titleIdx];
       document.title = TITLE_OPTIONS[titleIdx];
       localStorage.setItem(LS.title, titleIdx);
+      updateBgTheme();
     };
 
     // ---- Backgrounds dropdown ----
@@ -319,11 +348,9 @@
       }
     }
 
-    // ---- Text color optimization ----
     function updateBgTheme() {
       let bg = PRESET_BACKGROUNDS[bgIndex];
       let isDark = isBgDark(bgIndex);
-      // Page
       if (bg && bg.url) {
         document.body.style.background = `url('${bg.url}') center/cover no-repeat`;
       } else {
@@ -339,7 +366,6 @@
       document.documentElement.style.setProperty("--pop-color", isDark ? "#fff" : "#111");
     }
 
-    // ---- Persistence ----
     function loadPersisted() {
       try {
         names = JSON.parse(localStorage.getItem(LS.names)) || [];
@@ -350,8 +376,6 @@
       $nameList.value = names.join("\n");
       $duration.value = duration;
       $loadedCount.textContent = names.length;
-      $pageTitle.textContent = TITLE_OPTIONS[titleIdx];
-      document.title = TITLE_OPTIONS[titleIdx];
       renderTitleDropdown();
       renderBgDropdown();
     }
@@ -364,7 +388,6 @@
       localStorage.setItem(LS.title, titleIdx);
     }
 
-    // ---- Excel import ----
     $excel.onchange = e => {
       const file = e.target.files[0];
       if (!file) return;
@@ -384,20 +407,17 @@
       reader.readAsBinaryString(file);
     };
 
-    // ---- Manual entry ----
     $nameList.oninput = e => {
       names = $nameList.value.split("\n").map(x => x.trim()).filter(x => x);
       $loadedCount.textContent = names.length;
       persist();
     };
 
-    // ---- Duration ----
     $duration.oninput = e => {
       duration = Math.max(5, Math.min(90, Number($duration.value)));
       persist();
     };
 
-    // ---- Fullscreen helpers ----
     function enterFullscreen(el) {
       if (el.requestFullscreen) el.requestFullscreen();
       else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
@@ -411,7 +431,6 @@
       else if (document.msExitFullscreen) document.msExitFullscreen();
     }
 
-    // ---- Utility ----
     function randomFromArray(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
     function randomPos() {
       return {
@@ -421,7 +440,6 @@
       };
     }
 
-    // ---- Main logic ----
     function start() {
       if (names.length < 2) return alert("Please provide at least two names.");
       running = true;
@@ -472,6 +490,11 @@
       let bg = PRESET_BACKGROUNDS[bgIndex];
       $display.style.background = bg && bg.url ? `url('${bg.url}') center/cover no-repeat` : "rgba(255,255,255,0.9)";
       $display.innerHTML = '';
+      // Add banner title on top
+      let $titleBanner = document.createElement("div");
+      $titleBanner.className = "banner-title";
+      $titleBanner.textContent = TITLE_OPTIONS[titleIdx];
+      $display.appendChild($titleBanner);
     }
     function hideDisplayArea() {
       $display.style.display = "none";
@@ -494,19 +517,21 @@
       $name.style.top = pos.top;
       $name.style.left = pos.left;
       $name.style.transform = `rotate(${pos.rotate})`;
-      $name.dataset.expiry = Date.now() + 500; // 0.5s
+      $name.dataset.expiry = Date.now() + 700; // 0.7s
       let isDark = isBgDark(bgIndex);
       $name.style.setProperty('--pop-bg', isDark ? '#222' : '#fff');
       $name.style.setProperty('--pop-color', isDark ? '#fff' : '#111');
       $display.appendChild($name);
-      // Remove after 0.5s
+      // Remove after 0.7s
       const timeout = setTimeout(() => {
         $name.remove();
-      }, 500);
+      }, 700);
       popNameTimeouts.push(timeout);
     }
     function hidePoppedName() {
-      $display.innerHTML = '';
+      // Keep banner title
+      Array.from($display.querySelectorAll(".popped-name")).forEach(el => el.remove());
+      Array.from($display.querySelectorAll(".timer")).forEach(el => el.remove());
       popNameTimeouts.forEach(timeout => clearTimeout(timeout));
       popNameTimeouts = [];
     }
@@ -529,27 +554,43 @@
       let isDark = isBgDark(bgIndex);
       $winnerFull.style.background = bg && bg.url ? `url('${bg.url}') center/cover no-repeat` : "#fff";
       $winnerFull.style.setProperty('--winner-bg', $winnerFull.style.background);
+
+      // Winner title banner on top
+      const $winnerTitleBanner = document.createElement("div");
+      $winnerTitleBanner.className = "winner-title-banner";
+      $winnerTitleBanner.textContent = TITLE_OPTIONS[titleIdx];
+      $winnerFull.appendChild($winnerTitleBanner);
+
       // Winner banner
       const $winnerBanner = document.createElement("div");
       $winnerBanner.className = "winner-banner";
       $winnerBanner.innerHTML = `🎉 Winner: ${winner} 🎉`;
       $winnerBanner.style.background = isDark ? "#222" : "#fff";
       $winnerBanner.style.color = isDark ? "#fff" : "#111";
-      // Back button
+      $winnerFull.appendChild($winnerBanner);
+
+      // Back button (now outside winner-banner for better clickability)
       const $back = document.createElement("button");
       $back.className = "winner-back-btn";
       $back.textContent = "Back";
-      $back.onclick = function() {
+      $back.onclick = function(e) {
+        e.stopPropagation();
         $winnerFull.style.display = "none";
         exitFullscreen();
         reset();
       };
       $winnerBanner.appendChild($back);
 
-      $winnerFull.appendChild($winnerBanner);
+      // Make winnerFull clickable for back
+      $winnerFull.onclick = function(e) {
+        if (e.target === $winnerFull) {
+          $winnerFull.style.display = "none";
+          exitFullscreen();
+          reset();
+        }
+      };
     }
 
-    // Button events
     $start.onclick = start;
     $stop.onclick = stop;
     $reset.onclick = reset;
