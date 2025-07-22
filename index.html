@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Random Name Picker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- SheetJS for Excel import -->
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      background: #101c2c;
+      margin: 0;
+      min-height: 100vh;
+      color: #222;
+      transition: background .3s;
+      overflow-x: hidden;
+    }
+    .controls {
+      background: rgba(255,255,255,0.92);
+      border-radius: 12px;
+      padding: 24px;
+      max-width: 500px;
+      margin: 32px auto;
+      box-shadow: 0 6px 24px #0004;
+      position: relative;
+      z-index: 10;
+    }
+    .controls button {
+      margin: 8px 8px 0 0;
+      padding: 10px 20px;
+      border-radius: 6px;
+      border: none;
+      font-weight: bold;
+      font-size: 16px;
+      background: #1e88e5;
+      color: #fff;
+      cursor: pointer;
+      box-shadow: 0 2px 6px #0001;
+    }
+    .controls button[disabled] {
+      background: #888;
+      cursor: default;
+    }
+    .display-area {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      z-index: 30;
+      background: rgba(16,28,44,0.9);
+      pointer-events: none;
+    }
+    .popped-name {
+      position: absolute;
+      color: #fff;
+      background: #0008;
+      border-radius: 1em;
+      font-size: clamp(2rem, 8vw, 5rem);
+      font-weight: bold;
+      padding: 0.5em 1em;
+      box-shadow: 0 2px 18px #0006;
+      opacity: 1;
+      animation: fadePop 0.25s linear;
+      user-select: none;
+      pointer-events: none;
+    }
+    .winner {
+      position: fixed;
+      top: 50%; left: 50%; transform: translate(-50%,-50%);
+      color: #fff;
+      background: linear-gradient(90deg,#faad14,#f5222d,#1890ff 70%);
+      font-size: clamp(2.5rem, 10vw, 7rem);
+      border: 6px solid #fff;
+      border-radius: 30px;
+      padding: 0.4em 1.2em;
+      font-weight: bold;
+      z-index: 90;
+      box-shadow: 0 4px 48px #000d;
+      text-shadow: 0 2px 24px #000c;
+      animation: flash 1s infinite alternate;
+      cursor: pointer;
+      pointer-events: auto;
+      user-select: none;
+    }
+    .timer {
+      position: fixed; top: 18px; right: 32px;
+      font-size: 32px; color: #fff;
+      background: #000a; border-radius: 12px; padding: 6px 20px;
+      font-weight: bold; letter-spacing: 2px;
+      z-index: 99;
+      pointer-events: none;
+    }
+    @keyframes fadePop {
+      0% { opacity: 0; transform: scale(0.8) rotate(var(--deg, 0deg)); }
+      60% { opacity: 1; transform: scale(1.12) rotate(var(--deg, 0deg)); }
+      100% { opacity: 1; transform: scale(1) rotate(var(--deg, 0deg)); }
+    }
+    @keyframes flash {
+      from { box-shadow: 0 0 60px 10px #fff3,0 0 8px 2px #faad14; }
+      to   { box-shadow: 0 0 60px 30px #fff,0 0 18px 6px #faad14; }
+    }
+    @media (max-width: 600px) {
+      .controls { padding: 12px !important; }
+      .winner { font-size: 2.5rem !important; }
+    }
+    .background-preview {
+      max-width: 100%; max-height: 130px; margin-top: 8px; border-radius: 8px; box-shadow: 0 2px 12px #0002;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="controls">
+    <h2>Random Name Picker</h2>
+    <div style="margin-bottom: 16px;">
+      <label><b>Import Excel: </b>
+        <input type="file" accept=".xlsx,.xls" id="excel-input">
+      </label>
+    </div>
+    <div>
+      <b>Or paste/edit names (one per line):</b>
+      <textarea id="name-list" rows="5" style="width:100%;margin-top:8px;font-size:16px;border-radius:8px;padding:8px;" placeholder="Enter names, one per line..."></textarea>
+    </div>
+    <div style="margin-top: 14px;">
+      <b>Background image: </b>
+      <input type="file" accept="image/*" id="bg-input">
+      <button id="remove-bg" style="background:#d32f2f;display:none;">Remove</button>
+      <img id="bg-preview" class="background-preview" style="display:none;">
+    </div>
+    <div style="margin-top:20px;">
+      <button id="start-btn">Start</button>
+      <button id="stop-btn" disabled>Stop</button>
+      <button id="reset-btn">Reset</button>
+      <label style="margin-left:16px;font-size:16px;">
+        Duration:
+        <input id="duration-input" type="number" min="5" max="90" value="20" style="width:55px;font-size:16px;">
+        s
+      </label>
+    </div>
+    <div style="margin-top:10px;font-size:14px;color:#444;">
+      <b>Names loaded:</b> <span id="loaded-count">0</span>
+    </div>
+  </div>
+  <div id="display-area" class="display-area" style="display:none;"></div>
+  <script>
+    // Helpers
+    const $ = sel => document.querySelector(sel);
+    const LS = {
+      names: "winner_names",
+      bg: "winner_bg",
+      duration: "winner_duration"
+    };
+    // State
+    let names = [];
+    let duration = 20;
+    let running = false;
+    let countdown = 20;
+    let timerId = null;
+    let popId = null;
+    let winner = null;
+    let bgImage = "";
+
+    // Elements
+    const $nameList = $("#name-list");
+    const $excel = $("#excel-input");
+    const $start = $("#start-btn");
+    const $stop = $("#stop-btn");
+    const $reset = $("#reset-btn");
+    const $display = $("#display-area");
+    const $loadedCount = $("#loaded-count");
+    const $duration = $("#duration-input");
+    const $bgInput = $("#bg-input");
+    const $bgPreview = $("#bg-preview");
+    const $removeBg = $("#remove-bg");
+
+    // Load from localStorage
+    function loadPersisted() {
+      try {
+        names = JSON.parse(localStorage.getItem(LS.names)) || [];
+      } catch { names = []; }
+      bgImage = localStorage.getItem(LS.bg) || "";
+      duration = Number(localStorage.getItem(LS.duration)) || 20;
+      $nameList.value = names.join("\n");
+      $duration.value = duration;
+      $loadedCount.textContent = names.length;
+      if(bgImage) {
+        document.body.style.background = `url('${bgImage}') center/cover no-repeat`;
+        $bgPreview.src = bgImage;
+        $bgPreview.style.display = "";
+        $removeBg.style.display = "";
+      }
+    }
+    loadPersisted();
+
+    // Save to localStorage
+    function persist() {
+      localStorage.setItem(LS.names, JSON.stringify(names));
+      localStorage.setItem(LS.bg, bgImage || "");
+      localStorage.setItem(LS.duration, duration);
+    }
+
+    // Excel import
+    $excel.onchange = e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = evt => {
+        const data = evt.target.result;
+        const workbook = XLSX.read(data, { type: "binary" });
+        const wsname = workbook.SheetNames[0];
+        const ws = workbook.Sheets[wsname];
+        const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
+        const extracted = rows.map(r => r[0]).filter(x => !!x && typeof x === "string" && x.trim().length > 0);
+        names = extracted;
+        $nameList.value = names.join("\n");
+        $loadedCount.textContent = names.length;
+        persist();
+      };
+      reader.readAsBinaryString(file);
+    };
+
+    // Manual entry
+    $nameList.oninput = e => {
+      names = $nameList.value.split("\n").map(x => x.trim()).filter(x => x);
+      $loadedCount.textContent = names.length;
+      persist();
+    };
+
+    // Background image
+    $bgInput.onchange = e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = evt => {
+        bgImage = evt.target.result;
+        document.body.style.background = `url('${bgImage}') center/cover no-repeat`;
+        $bgPreview.src = bgImage;
+        $bgPreview.style.display = "";
+        $removeBg.style.display = "";
+        persist();
+      };
+      reader.readAsDataURL(file);
+    };
+    $removeBg.onclick = () => {
+      bgImage = "";
+      document.body.style.background = "#101c2c";
+      $bgPreview.style.display = "none";
+      $removeBg.style.display = "none";
+      persist();
+    };
+
+    // Duration
+    $duration.oninput = e => {
+      duration = Math.max(5, Math.min(90, Number($duration.value)));
+      persist();
+    };
+
+    // Fullscreen helpers
+    function enterFullscreen() {
+      if ($display.requestFullscreen) $display.requestFullscreen();
+      else if ($display.webkitRequestFullscreen) $display.webkitRequestFullscreen();
+      else if ($display.mozRequestFullScreen) $display.mozRequestFullScreen();
+      else if ($display.msRequestFullscreen) $display.msRequestFullscreen();
+    }
+    function exitFullscreen() {
+      if (document.exitFullscreen) document.exitFullscreen();
+      else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+      else if (document.mozCancelFullScreen) document.mozCancelFullScreen();
+      else if (document.msExitFullscreen) document.msExitFullscreen();
+    }
+
+    // Utility
+    function randomFromArray(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+    function randomPos() {
+      return {
+        top: `${Math.random() * 80 + 5}%`,
+        left: `${Math.random() * 80 + 5}%`,
+        rotate: `${Math.random() * 40 - 20}deg`
+      };
+    }
+
+    // Main logic
+    function start() {
+      if (names.length < 2) return alert("Please provide at least two names.");
+      running = true;
+      countdown = duration;
+      winner = null;
+      $start.disabled = true;
+      $stop.disabled = false;
+      $reset.disabled = true;
+      showDisplayArea();
+      enterFullscreen();
+      // Timer
+      showTimer();
+      timerId = setInterval(() => {
+        countdown--;
+        showTimer();
+        if (countdown <= 0) {
+          stop();
+        }
+      }, 1000);
+      // Popping animation
+      popId = setInterval(() => {
+        showPoppedName(randomFromArray(names));
+      }, 70);
+    }
+    function stop() {
+      running = false;
+      $start.disabled = false;
+      $stop.disabled = true;
+      $reset.disabled = false;
+      clearInterval(timerId);
+      clearInterval(popId);
+      hidePoppedName();
+      setTimeout(() => {
+        pickWinner();
+        exitFullscreen();
+      }, 400);
+    }
+    function reset() {
+      running = false;
+      winner = null;
+      $start.disabled = false;
+      $stop.disabled = true;
+      $reset.disabled = false;
+      hideDisplayArea();
+    }
+
+    function showDisplayArea() {
+      $display.style.display = "";
+      $display.style.background = bgImage ? `url('${bgImage}') center/cover no-repeat` : "rgba(16,28,44,0.9)";
+      $display.innerHTML = '';
+    }
+    function hideDisplayArea() {
+      $display.style.display = "none";
+      $display.innerHTML = '';
+    }
+    function showPoppedName(name) {
+      let $name = $display.querySelector(".popped-name");
+      if (!$name) {
+        $name = document.createElement("div");
+        $name.className = "popped-name";
+        $display.appendChild($name);
+      }
+      const pos = randomPos();
+      $name.textContent = name;
+      $name.style.top = pos.top;
+      $name.style.left = pos.left;
+      $name.style.transform = `rotate(${pos.rotate})`;
+    }
+    function hidePoppedName() {
+      const $name = $display.querySelector(".popped-name");
+      if ($name) $name.remove();
+      const $timer = $display.querySelector(".timer");
+      if ($timer) $timer.remove();
+    }
+    function showTimer() {
+      let $timer = $display.querySelector(".timer");
+      if (!$timer) {
+        $timer = document.createElement("div");
+        $timer.className = "timer";
+        $display.appendChild($timer);
+      }
+      $timer.textContent = countdown+"s";
+    }
+    function pickWinner() {
+      winner = randomFromArray(names);
+      const $winner = document.createElement("div");
+      $winner.className = "winner";
+      $winner.innerHTML = `🎉 Winner: ${winner} 🎉<div style="font-size:18px;margin-top:12px;color:#fff;"><i>(Click to dismiss)</i></div>`;
+      $winner.onclick = function() {
+        reset();
+        hideDisplayArea();
+      };
+      $display.appendChild($winner);
+    }
+
+    // Button events
+    $start.onclick = start;
+    $stop.onclick = stop;
+    $reset.onclick = reset;
+
+    // Initial state
+    reset();
+  </script>
+</body>
+</html>
