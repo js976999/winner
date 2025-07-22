@@ -107,10 +107,6 @@
       transition: background 0.3s;
     }
     .winner-banner {
-      background: var(--winner-banner-bg, #fff);
-      color: var(--winner-banner-color, #111);
-      border: 4px solid #111;
-      border-radius: 25px;
       min-width: 320px;
       max-width: 90vw;
       padding: 1.2em 2em;
@@ -127,7 +123,29 @@
       position: relative;
       animation: winnerPop 0.7s;
       user-select: none;
-      transition: background 0.3s, color 0.3s;
+      border: 4px solid #111;
+      border-radius: 25px;
+      /* Winner banner background with overlay for text readability */
+      background: var(--winner-banner-bg, #fff);
+      color: var(--winner-banner-color, #111);
+      background-size: cover;
+      background-repeat: no-repeat;
+      background-position: center;
+      position: relative;
+      /* Overlay for readability */
+      overflow: hidden;
+    }
+    .winner-banner::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: rgba(255,255,255,0.7); /* overlay to make text readable on image */
+      z-index: 0;
+      border-radius: 25px;
+    }
+    .winner-banner > span {
+      position: relative;
+      z-index: 1;
     }
     .winner-title-banner {
       width: 100vw;
@@ -490,7 +508,6 @@
       let bg = PRESET_BACKGROUNDS[bgIndex];
       $display.style.background = bg && bg.url ? `url('${bg.url}') center/cover no-repeat` : "rgba(255,255,255,0.9)";
       $display.innerHTML = '';
-      // Add banner title on top
       let $titleBanner = document.createElement("div");
       $titleBanner.className = "banner-title";
       $titleBanner.textContent = TITLE_OPTIONS[titleIdx];
@@ -503,13 +520,11 @@
       popNameTimeouts = [];
     }
     function showPoppedName(name) {
-      // Remove any expired popped names
       Array.from($display.querySelectorAll(".popped-name")).forEach(el => {
         if (!el.dataset.expiry || Date.now() > parseInt(el.dataset.expiry)) {
           el.remove();
         }
       });
-      // New one
       const $name = document.createElement("div");
       $name.className = "popped-name";
       $name.textContent = name;
@@ -522,14 +537,12 @@
       $name.style.setProperty('--pop-bg', isDark ? '#222' : '#fff');
       $name.style.setProperty('--pop-color', isDark ? '#fff' : '#111');
       $display.appendChild($name);
-      // Remove after 0.7s
       const timeout = setTimeout(() => {
         $name.remove();
       }, 700);
       popNameTimeouts.push(timeout);
     }
     function hidePoppedName() {
-      // Keep banner title
       Array.from($display.querySelectorAll(".popped-name")).forEach(el => el.remove());
       Array.from($display.querySelectorAll(".timer")).forEach(el => el.remove());
       popNameTimeouts.forEach(timeout => clearTimeout(timeout));
@@ -564,12 +577,19 @@
       // Winner banner
       const $winnerBanner = document.createElement("div");
       $winnerBanner.className = "winner-banner";
-      $winnerBanner.innerHTML = `🎉 Winner: ${winner} 🎉`;
-      $winnerBanner.style.background = isDark ? "#222" : "#fff";
+      $winnerBanner.innerHTML = `<span>🎉 Winner: ${winner} 🎉</span>`;
+      // Set background image for winner banner (with overlay via ::before)
+      if (bg && bg.url) {
+        $winnerBanner.style.backgroundImage = `url('${bg.url}')`;
+        $winnerBanner.style.backgroundSize = "cover";
+        $winnerBanner.style.backgroundPosition = "center";
+      } else {
+        $winnerBanner.style.backgroundImage = "";
+      }
       $winnerBanner.style.color = isDark ? "#fff" : "#111";
       $winnerFull.appendChild($winnerBanner);
 
-      // Back button (now outside winner-banner for better clickability)
+      // Back button
       const $back = document.createElement("button");
       $back.className = "winner-back-btn";
       $back.textContent = "Back";
