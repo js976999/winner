@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Random Name Picker</title>
+  <title>Shaw & Partners Ski Draw</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- SheetJS for Excel import -->
   <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
@@ -174,11 +174,16 @@
   </style>
 </head>
 <body>
-  <div id="page-title" class="page-title">Random Name Picker</div>
+  <div id="page-title" class="page-title">Shaw & Partners Ski Draw</div>
   <div class="controls">
     <div style="margin-bottom: 12px;">
       <label><b>Page Title: </b>
-        <select id="title-select"></select>
+        <select id="title-select">
+          <option value="0">Shaw & Partners Ski Draw</option>
+          <option value="1">Shaw and Partners Paddle Draw</option>
+          <option value="2">Race One Board Draw</option>
+          <option value="3">Ben Jamin Hewitt Draw</option>
+        </select>
       </label>
     </div>
     <div style="margin-bottom: 16px;">
@@ -214,16 +219,10 @@
   <script>
     // Title options
     const TITLE_OPTIONS = [
-      "Random Name Picker",
-      "Lucky Draw",
-      "Prize Winner",
-      "Raffle Selector",
-      "Who is Next?",
-      "Today's Winner",
-      "Wheel of Names",
-      "Team Draw",
-      "Giveaway Winner",
-      "🎉 Special Draw 🎉"
+      "Shaw & Partners Ski Draw",
+      "Shaw and Partners Paddle Draw",
+      "Race One Board Draw",
+      "Ben Jamin Hewitt Draw"
     ];
 
     // Preset backgrounds (match your /images/ files)
@@ -279,18 +278,12 @@
 
     // ---- Title dropdown ----
     function renderTitleDropdown() {
-      $titleSelect.innerHTML = "";
-      TITLE_OPTIONS.forEach((t, i) => {
-        let opt = document.createElement("option");
-        opt.value = i;
-        opt.textContent = t;
-        $titleSelect.appendChild(opt);
-      });
       $titleSelect.value = titleIdx;
     }
     $titleSelect.onchange = function() {
       titleIdx = parseInt($titleSelect.value);
       $pageTitle.textContent = TITLE_OPTIONS[titleIdx];
+      document.title = TITLE_OPTIONS[titleIdx];
       localStorage.setItem(LS.title, titleIdx);
     };
 
@@ -338,6 +331,7 @@
       }
       document.body.style.color = isDark ? "#fff" : "#111";
       $pageTitle.style.color = isDark ? "#fff" : "#111";
+      document.title = TITLE_OPTIONS[titleIdx];
       document.documentElement.style.setProperty("--winner-bg", bg && bg.url ? `url('${bg.url}') center/cover no-repeat` : "#fff");
       document.documentElement.style.setProperty("--winner-banner-bg", isDark ? "#222" : "#fff");
       document.documentElement.style.setProperty("--winner-banner-color", isDark ? "#fff" : "#111");
@@ -357,6 +351,7 @@
       $duration.value = duration;
       $loadedCount.textContent = names.length;
       $pageTitle.textContent = TITLE_OPTIONS[titleIdx];
+      document.title = TITLE_OPTIONS[titleIdx];
       renderTitleDropdown();
       renderBgDropdown();
     }
@@ -561,8 +556,6 @@
 
     // Initial state
     reset();
-
-    // First render for title and backgrounds
     renderTitleDropdown();
     renderBgDropdown();
     updateBgTheme();
