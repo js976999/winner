@@ -2,562 +2,105 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Draw App</title>
+  <title>Draw App Demo</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <!-- SheetJS for Excel import -->
-  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
   <style>
-    body {
-      font-family: system-ui, sans-serif;
-      background: #fff;
-      margin: 0;
-      min-height: 100vh;
-      color: #111;
-      transition: background .3s;
-      overflow-x: hidden;
-    }
-    .controls {
-      background: rgba(0,0,0,0.07);
-      border-radius: 12px;
-      padding: 24px;
-      max-width: 500px;
-      margin: 32px auto;
-      box-shadow: 0 6px 24px #0001;
-      position: relative;
-      z-index: 10;
-    }
-    .controls button, .controls select {
-      font-size: 1.1rem;
-      padding: 8px 16px;
-      border-radius: 7px;
-      border: none;
-      margin-right: 6px;
-      background: #111;
-      color: #fff;
-      cursor: pointer;
-      transition: background 0.2s, color 0.2s;
-    }
-    .controls button:disabled {
-      background: #aaa;
-      color: #eee;
-      cursor: not-allowed;
-    }
-    .controls label {
-      margin-right: 10px;
-    }
+    body { font-family: system-ui,sans-serif; background:#fff; margin:0; }
+    .controls { max-width:600px; margin:32px auto; }
     .winner-full {
-      position: fixed;
-      top: 0; left: 0; width: 100vw; height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: flex-start;
-      z-index: 99;
-      background: var(--winner-bg, #fff);
-      pointer-events: auto;
-      transition: background 0.3s;
+      display: none; position:fixed;top:0;left:0;width:100vw;height:100vh;
+      background:#fff;z-index:100;justify-content:center;align-items:center;flex-direction:column;
     }
     .winner-banner {
-      min-width: 320px;
-      max-width: 90vw;
-      margin: 60px auto 0 auto;
-      padding: 2.2em 1.5em 2.4em 1.5em;
-      border-radius: 25px;
-      background: var(--winner-banner-bg, #fff);
-      color: var(--winner-banner-color, #111);
-      background-size: cover;
-      background-repeat: no-repeat;
-      background-position: center;
-      box-shadow: 0 6px 40px #0002;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      position: relative;
-      animation: winnerPop 0.7s;
-      user-select: none;
-      border: 4px solid #111;
-      overflow: hidden;
+      min-width:260px;max-width:90vw;padding:2em 1.5em;background:#fff;border-radius:25px;
+      box-shadow:0 6px 40px #0002;display:flex;flex-direction:column;align-items:center;position:relative;
     }
-    .winner-modal-title {
-      font-size: 2rem;
-      font-weight: bold;
-      margin-bottom: 10px;
-      display: block;
-      text-align: center;
-      letter-spacing: 0.03em;
-    }
-    .winner-modal-label {
-      font-size: 1.4rem;
-      font-weight: 500;
-      margin-bottom: 6px;
-      letter-spacing: 0.04em;
-      color: #666;
-      text-align: center;
-    }
-    .winner-modal-name {
-      font-size: 3rem;
-      font-weight: bold;
-      text-align: center;
-      margin-bottom: 4px;
-      letter-spacing: 0.04em;
-      color: #222;
-      word-break: break-word;
-    }
-    .winner-back-btn {
-      position: absolute;
-      top: -55px; right: 0;
-      background: #111;
-      color: #fff;
-      border: none;
-      border-radius: 16px;
-      font-size: 1rem;
-      padding: 7px 18px;
-      z-index: 110;
-      cursor: pointer;
-      opacity: 0.7;
-      transition: opacity 0.2s;
-      font-weight: normal;
-      box-shadow: 0 2px 12px #0002;
-    }
-    .winner-back-btn:hover {
-      opacity: 1;
-      background: #333;
-    }
+    .winner-modal-title { font-size:2rem;font-weight:bold;margin-bottom:10px;text-align:center; }
+    .winner-modal-label { font-size:1.2rem;margin-bottom:6px;color:#666;text-align:center; }
+    .winner-modal-name { font-size:2.5rem;font-weight:bold;text-align:center;margin-bottom:4px; }
+    .winner-back-btn { position:absolute;top:-40px;right:0;background:#111;color:#fff;border:none;border-radius:16px;font-size:1rem;padding:7px 18px;z-index:110;cursor:pointer; }
     .redraw-btn {
-      position: fixed;
-      right: 24px;
-      bottom: 24px;
-      z-index: 130;
-      background: #111;
-      color: #fff;
-      border: none;
-      border-radius: 50%;
-      width: 48px;
-      height: 48px;
-      opacity: 0.30;
-      box-shadow: 0 2px 10px #0002;
-      font-size: 1.7rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: opacity 0.2s, background 0.3s;
-      outline: none;
+      position:fixed;right:24px;bottom:24px;z-index:130;background:#111;color:#fff;border:none;border-radius:50%;
+      width:48px;height:48px;opacity:.3;box-shadow:0 2px 10px #0002;font-size:1.7rem;display:flex;align-items:center;justify-content:center;cursor:pointer;
+      transition:opacity .2s,background .3s;outline:none;
     }
-    .redraw-btn:hover {
-      opacity: 0.7;
-      background: #222;
-    }
-    @media (max-width: 600px) {
-      .controls { padding: 12px !important; }
-      .winner-banner { font-size: 1.7rem !important; min-width: 140px; }
-      .winner-back-btn { top: -40px; right: 0;}
-      .winner-modal-title { font-size: 1.3rem !important; }
-      .winner-modal-label { font-size: 1.1rem !important; }
-      .winner-modal-name { font-size: 2.1rem !important; }
-    }
+    .redraw-btn:hover { opacity:0.7;background:#222; }
   </style>
 </head>
 <body>
   <div class="controls">
-    <div style="margin-bottom: 12px;">
-      <label><b>Page Title: </b>
-        <select id="title-select">
-          <option value="0">No Title</option>
-          <option value="1">Shaw & Partners Ski Draw</option>
-          <option value="2">Shaw and Partners Paddle Draw</option>
-          <option value="3">Race One Board Draw</option>
-          <option value="4">Ben Jamin Hewitt Draw</option>
-        </select>
-      </label>
-    </div>
-    <div style="margin-bottom: 16px;">
-      <label><b>Import Excel: </b>
-        <input type="file" accept=".xlsx,.xls" id="excel-input">
-      </label>
-    </div>
-    <div>
-      <b>Or paste/edit names (one per line):</b>
-      <textarea id="name-list" rows="5" style="width:100%;margin-top:8px;font-size:16px;border-radius:8px;padding:8px;" placeholder="Enter names, one per line..."></textarea>
-    </div>
-    <div style="margin-top: 14px;">
-      <b>Choose Background: </b>
-      <select id="bg-dropdown"></select>
-      <div id="bg-preview-area" style="margin-top:8px;min-height:30px;"></div>
-    </div>
-    <div style="margin-top:20px;">
-      <button id="start-btn">Start</button>
-      <button id="stop-btn" disabled>Stop</button>
-      <button id="reset-btn">Reset</button>
-      <label style="margin-left:16px;font-size:16px;">
-        Duration:
-        <input id="duration-input" type="number" min="5" max="90" value="20" style="width:55px;font-size:16px;">
-        s
-      </label>
-    </div>
-    <div style="margin-top:10px;font-size:14px;color:#444;">
-      <b>Names loaded:</b> <span id="loaded-count">0</span>
-    </div>
+    <label>Page Title:
+      <select id="title-select">
+        <option value="0">No Title</option>
+        <option value="1">Test Draw</option>
+      </select>
+    </label>
+    <br><br>
+    <textarea id="name-list" rows="3" style="width:100%;">Alice
+Bob
+Charlie</textarea><br>
+    <button id="start-btn">Start</button>
   </div>
-  <div id="display-area" class="display-area" style="display:none;"></div>
-  <div id="winner-full" class="winner-full" style="display:none;"></div>
+  <div id="winner-full" class="winner-full"></div>
   <button id="redraw-btn" class="redraw-btn" title="Redraw" style="display:none;">&#8635;</button>
   <script>
-    // ---- Title options ----
-    const TITLE_OPTIONS = [
-      "No Title",
-      "Shaw & Partners Ski Draw",
-      "Shaw and Partners Paddle Draw",
-      "Race One Board Draw",
-      "Ben Jamin Hewitt Draw"
-    ];
-
-    // Preset backgrounds (match your /images/ files)
-    const PRESET_BACKGROUNDS = [
-      {name: "None", url: null},
-      {name: "Race One", url: "images/raceone_backgound.png"},
-      {name: "SSS", url: "images/sss_backgound.png"},
-      {name: "Warw", url: "images/warw_backgound.png"}
-    ];
-
-    function isBgDark(bgIdx) {
-      return false;
-    }
-
-    const $ = sel => document.querySelector(sel);
-    const LS = {
-      names: "winner_names_v2",
-      bgIndex: "winner_bg_idx",
-      duration: "winner_duration_v2",
-      title: "winner_title_v2"
-    };
-
-    let names = [];
-    let duration = 20;
-    let running = false;
-    let countdown = 20;
-    let timerId = null;
-    let popId = null;
-    let winner = null;
-    let lastWinner = null;
-    let popNameTimeouts = [];
-    let bgIndex = 0;
-    let titleIdx = 0;
-
-    const $titleSelect = $("#title-select");
-    const $nameList = $("#name-list");
-    const $excel = $("#excel-input");
-    const $start = $("#start-btn");
-    const $stop = $("#stop-btn");
-    const $reset = $("#reset-btn");
-    const $display = $("#display-area");
-    const $winnerFull = $("#winner-full");
-    const $loadedCount = $("#loaded-count");
-    const $duration = $("#duration-input");
-    const $bgDropdown = $("#bg-dropdown");
-    const $bgPreviewArea = $("#bg-preview-area");
+    // --- CONFIG ---
+    const TITLE_OPTIONS = ["No Title","Test Draw"];
+    // --- DOM ---
+    const $titleSelect = document.getElementById("title-select");
+    const $nameList = document.getElementById("name-list");
+    const $start = document.getElementById("start-btn");
+    const $winnerFull = document.getElementById("winner-full");
     const $redraw = document.getElementById("redraw-btn");
+    // --- STATE ---
+    let names = [];
+    let winner = null, lastWinner = null, titleIdx = 0;
 
-    // ---- Title dropdown ----
-    function renderTitleDropdown() {
-      $titleSelect.value = titleIdx;
-      document.title = TITLE_OPTIONS[titleIdx];
+    // --- FUNCTIONS ---
+    function syncNamesFromTextarea() {
+      names = $nameList.value.split("\n").map(x=>x.trim()).filter(x=>x);
     }
-    $titleSelect.onchange = function() {
-      titleIdx = parseInt($titleSelect.value);
-      document.title = TITLE_OPTIONS[titleIdx];
-      localStorage.setItem(LS.title, titleIdx);
-      updateBgTheme();
-    };
-
-    // ---- Backgrounds dropdown ----
-    function renderBgDropdown() {
-      $bgDropdown.innerHTML = "";
-      PRESET_BACKGROUNDS.forEach((bg, i) => {
-        let opt = document.createElement("option");
-        opt.value = i;
-        opt.textContent = bg.name;
-        $bgDropdown.appendChild(opt);
-      });
-      $bgDropdown.value = bgIndex;
-      renderBgPreview();
-    }
-    $bgDropdown.onchange = function() {
-      bgIndex = parseInt($bgDropdown.value);
-      localStorage.setItem(LS.bgIndex, bgIndex);
-      updateBgTheme();
-      renderBgPreview();
-    };
-    function renderBgPreview() {
-      let bg = PRESET_BACKGROUNDS[bgIndex];
-      $bgPreviewArea.innerHTML = bg && bg.url
-        ? `<img src="${bg.url}" alt="Background preview" class="background-preview" style="max-width:100%;max-height:130px;">`
-        : "";
-    }
-
-    function updateBgTheme() {
-      let bg = PRESET_BACKGROUNDS[bgIndex];
-      let isDark = isBgDark(bgIndex);
-      document.documentElement.style.setProperty("--winner-bg", bg && bg.url ? `url('${bg.url}') center/cover no-repeat` : "#fff");
-      document.documentElement.style.setProperty("--winner-banner-bg", isDark ? "#222" : "#fff");
-      document.documentElement.style.setProperty("--winner-banner-color", isDark ? "#fff" : "#111");
-    }
-
-    function persist() {
-      localStorage.setItem(LS.names, JSON.stringify(names));
-      localStorage.setItem(LS.bgIndex, bgIndex);
-      localStorage.setItem(LS.duration, duration);
-      localStorage.setItem(LS.title, titleIdx);
-    }
-    function loadPersisted() {
-      try {
-        names = JSON.parse(localStorage.getItem(LS.names)) || [];
-      } catch { names = []; }
-      bgIndex = parseInt(localStorage.getItem(LS.bgIndex)) || 0;
-      duration = Number(localStorage.getItem(LS.duration)) || 20;
-      titleIdx = parseInt(localStorage.getItem(LS.title)) || 0;
-      $nameList.value = names.join("\n");
-      $duration.value = duration;
-      $loadedCount.textContent = names.length;
-      renderTitleDropdown();
-      renderBgDropdown();
-    }
-    loadPersisted();
-
-    $excel.onchange = e => {
-      const file = e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = evt => {
-        const data = evt.target.result;
-        const workbook = XLSX.read(data, { type: "binary" });
-        const wsname = workbook.SheetNames[0];
-        const ws = workbook.Sheets[wsname];
-        const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
-        const extracted = rows.map(r => r[0]).filter(x => !!x && typeof x === "string" && x.trim().length > 0);
-        names = extracted;
-        $nameList.value = names.join("\n");
-        $loadedCount.textContent = names.length;
-        persist();
-      };
-      reader.readAsBinaryString(file);
-    };
-
-    $nameList.oninput = e => {
-      names = $nameList.value.split("\n").map(x => x.trim()).filter(x => x);
-      $loadedCount.textContent = names.length;
-      persist();
-    };
-
-    $duration.oninput = e => {
-      duration = Math.max(5, Math.min(90, Number($duration.value)));
-      persist();
-    };
-
-    function randomFromArray(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
-    function randomPos() {
-      return {
-        top: `${Math.random() * 80 + 5}%`,
-        left: `${Math.random() * 80 + 5}%`,
-        rotate: `${Math.random() * 40 - 20}deg`
-      };
-    }
-
-    function showDisplayArea() {
-      $display.style.display = "";
-      let bg = PRESET_BACKGROUNDS[bgIndex];
-      $display.style.background = bg && bg.url ? `url('${bg.url}') center/cover no-repeat` : "rgba(255,255,255,0.9)";
-      $display.innerHTML = '';
-    }
-    function hideDisplayArea() {
-      $display.style.display = "none";
-      $display.innerHTML = '';
-      popNameTimeouts.forEach(timeout => clearTimeout(timeout));
-      popNameTimeouts = [];
-    }
-    function showPoppedName(name) {
-      Array.from($display.querySelectorAll(".popped-name")).forEach(el => {
-        if (!el.dataset.expiry || Date.now() > parseInt(el.dataset.expiry)) {
-          el.remove();
-        }
-      });
-      const $name = document.createElement("div");
-      $name.className = "popped-name";
-      $name.textContent = name;
-      const pos = randomPos();
-      $name.style.top = pos.top;
-      $name.style.left = pos.left;
-      $name.style.transform = `rotate(${pos.rotate})`;
-      $name.dataset.expiry = Date.now() + 700; // 0.7s
-      let isDark = isBgDark(bgIndex);
-      $name.style.setProperty('--pop-bg', isDark ? '#222' : '#fff');
-      $name.style.setProperty('--pop-color', isDark ? '#fff' : '#111');
-      $display.appendChild($name);
-      const timeout = setTimeout(() => {
-        $name.remove();
-      }, 700);
-      popNameTimeouts.push(timeout);
-    }
-
-    function start() {
-      if (names.length < 2) return alert("Please provide at least two names.");
-      running = true;
-      countdown = duration;
-      winner = null;
-      $start.disabled = true;
-      $stop.disabled = false;
-      $reset.disabled = true;
-      showDisplayArea();
-      $winnerFull.style.display = "none";
-      enterFullscreen($display);
-      timerId = setInterval(() => {
-        countdown--;
-        if (countdown <= 0) {
-          stop();
-        }
-      }, 1000);
-      popId = setInterval(() => {
-        showPoppedName(randomFromArray(names));
-      }, 70);
-    }
-    function stop() {
-      running = false;
-      $start.disabled = false;
-      $stop.disabled = true;
-      $reset.disabled = false;
-      clearInterval(timerId);
-      clearInterval(popId);
-      hideDisplayArea();
-      setTimeout(() => {
-        pickWinner();
-      }, 400);
-    }
-    function reset() {
-      running = false;
-      winner = null;
-      lastWinner = null;
-      $start.disabled = false;
-      $stop.disabled = true;
-      $reset.disabled = false;
-      hideDisplayArea();
-      $winnerFull.style.display = "none";
-      $redraw.style.display = "none";
-    }
-
     function pickWinner() {
-      winner = randomFromArray(names);
+      if (names.length < 2) { alert("2+ names required"); return; }
+      winner = names[Math.floor(Math.random()*names.length)];
       lastWinner = winner;
-      $display.style.display = "none";
-      $winnerFull.style.display = "";
-      $winnerFull.innerHTML = '';
-      let bg = PRESET_BACKGROUNDS[bgIndex];
-      let isDark = isBgDark(bgIndex);
-      $winnerFull.style.background = bg && bg.url ? `url('${bg.url}') center/cover no-repeat` : "#fff";
-      $winnerFull.style.setProperty('--winner-bg', $winnerFull.style.background);
-
-      // Winner banner (centered box)
-      const $winnerBanner = document.createElement("div");
-      $winnerBanner.className = "winner-banner";
-
-      // Page Title (unless "No Title" selected)
-      if (titleIdx > 0) {
-        const $modalTitle = document.createElement("div");
-        $modalTitle.className = "winner-modal-title";
-        $modalTitle.textContent = TITLE_OPTIONS[titleIdx];
-        $winnerBanner.appendChild($modalTitle);
+      $winnerFull.innerHTML = "";
+      const $banner = document.createElement("div");
+      $banner.className = "winner-banner";
+      if(titleIdx>0){
+        const $t=document.createElement("div");$t.className="winner-modal-title";$t.textContent=TITLE_OPTIONS[titleIdx];$banner.appendChild($t);
       }
-
-      // "Winner" label
-      const $modalLabel = document.createElement("div");
-      $modalLabel.className = "winner-modal-label";
-      $modalLabel.textContent = "Winner";
-      $winnerBanner.appendChild($modalLabel);
-
-      // Winner name
-      const $modalName = document.createElement("div");
-      $modalName.className = "winner-modal-name";
-      $modalName.textContent = winner;
-      $winnerBanner.appendChild($modalName);
-
-      // Set background image for winner banner (with overlay via ::before)
-      if (bg && bg.url) {
-        $winnerBanner.style.backgroundImage = `url('${bg.url}')`;
-        $winnerBanner.style.backgroundSize = "cover";
-        $winnerBanner.style.backgroundPosition = "center";
-      } else {
-        $winnerBanner.style.backgroundImage = "";
-      }
-      $winnerBanner.style.color = isDark ? "#fff" : "#111";
-      $winnerFull.appendChild($winnerBanner);
-
-      // Back button
-      const $back = document.createElement("button");
-      $back.className = "winner-back-btn";
-      $back.textContent = "Back";
-      $back.onclick = function(e) {
-        e.stopPropagation();
-        $winnerFull.style.display = "none";
-        exitFullscreen();
-        reset();
-      };
-      $winnerBanner.appendChild($back);
-
-      // Show redraw button
+      const $l=document.createElement("div");$l.className="winner-modal-label";$l.textContent="Winner";$banner.appendChild($l);
+      const $n=document.createElement("div");$n.className="winner-modal-name";$n.textContent=winner;$banner.appendChild($n);
+      const $back=document.createElement("button");$back.className="winner-back-btn";$back.textContent="Back";
+      $back.onclick=()=>{$winnerFull.style.display="none";$redraw.style.display="none";};
+      $banner.appendChild($back);
+      $winnerFull.appendChild($banner);
+      $winnerFull.style.display = "flex";
       $redraw.style.display = "";
+      // Allow clicking outside to close
+      $winnerFull.onclick = function(e) {
+        if (e.target === $winnerFull) {
+          $winnerFull.style.display = "none";
+          $redraw.style.display = "none";
+        }
+      };
     }
-
-    // Redraw button logic
-    $redraw.onclick = function(e) {
-      e.stopPropagation();
-      if (!lastWinner) return;
-      // Remove lastWinner from names
-      names = names.filter(n => n !== lastWinner);
-      persist();
-      if (names.length === 0) {
-        alert("No more names left to draw.");
-        reset();
-        return;
-      }
-      $winnerFull.style.display = "none";
-      setTimeout(() => {
-        pickWinner();
-      }, 250); // Small delay for UI smoothness
-    };
-
-    // When hiding winner screen, also hide redraw button
-    $winnerFull.onclick = function(e) {
-      if (e.target === $winnerFull) {
-        $winnerFull.style.display = "none";
-        exitFullscreen();
-        reset();
-        $redraw.style.display = "none";
-      }
-    };
-
-    // Fullscreen helpers
-    function enterFullscreen(el) {
-      if (el.requestFullscreen) el.requestFullscreen();
-      else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
-      else if (el.mozRequestFullScreen) el.mozRequestFullScreen();
-      else if (el.msRequestFullscreen) el.msRequestFullscreen();
+    // --- EVENT HOOKS ---
+    function redrawWinner() {
+      if(!lastWinner) return;
+      names = names.filter(n=>n!==lastWinner);
+      $nameList.value = names.join("\n");
+      if(names.length < 1) { alert("No more names left"); $winnerFull.style.display="none"; $redraw.style.display="none"; return; }
+      $winnerFull.style.display="none";
+      setTimeout(() => pickWinner(), 250);
     }
-    function exitFullscreen() {
-      if (document.exitFullscreen) document.exitFullscreen();
-      else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
-      else if (document.mozCancelFullScreen) document.mozCancelFullScreen();
-      else if (document.msExitFullscreen) document.msExitFullscreen();
-    }
-
-    $start.onclick = start;
-    $stop.onclick = stop;
-    $reset.onclick = reset;
-
-    // Initial state
-    reset();
-    renderTitleDropdown();
-    renderBgDropdown();
-    updateBgTheme();
+    $titleSelect.onchange = () => titleIdx = parseInt($titleSelect.value);
+    $nameList.oninput = syncNamesFromTextarea;
+    $start.onclick = () => { syncNamesFromTextarea(); pickWinner(); };
+    $redraw.onclick = redrawWinner;
+    // --- INIT ---
+    syncNamesFromTextarea();
   </script>
 </body>
 </html>
