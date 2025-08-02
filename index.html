@@ -56,7 +56,6 @@ Charlie</textarea><br>
     let names = [];
     let winner = null, lastWinner = null, titleIdx = 0;
 
-    // --- FUNCTIONS ---
     function syncNamesFromTextarea() {
       names = $nameList.value.split("\n").map(x=>x.trim()).filter(x=>x);
     }
@@ -86,7 +85,6 @@ Charlie</textarea><br>
         }
       };
     }
-    // --- EVENT HOOKS ---
     function redrawWinner() {
       if(!lastWinner) return;
       names = names.filter(n=>n!==lastWinner);
