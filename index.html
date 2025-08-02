@@ -8,8 +8,10 @@
     body { font-family: system-ui,sans-serif; background:#fff; margin:0; }
     .controls { max-width:600px; margin:32px auto; }
     .winner-full {
-      display: none; position:fixed;top:0;left:0;width:100vw;height:100vh;
-      background:#fff;z-index:100;justify-content:center;align-items:center;flex-direction:column;
+      display: none;
+      position:fixed;top:0;left:0;width:100vw;height:100vh;
+      background:#fff;z-index:100;
+      justify-content:center;align-items:center;flex-direction:column;
     }
     .winner-banner {
       min-width:260px;max-width:90vw;padding:2em 1.5em;background:#fff;border-radius:25px;
@@ -75,6 +77,7 @@ Charlie</textarea><br>
       $back.onclick=()=>{$winnerFull.style.display="none";$redraw.style.display="none";};
       $banner.appendChild($back);
       $winnerFull.appendChild($banner);
+      // THE KEY: set display = "flex" for flexbox!
       $winnerFull.style.display = "flex";
       $redraw.style.display = "";
       // Allow clicking outside to close
