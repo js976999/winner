@@ -11,16 +11,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
+  // Ensure the background updates on change
   bgSelect.addEventListener('change', setBackgroundImage);
 
-  // Optional: remember last choice for session
-  if (window.sessionStorage) {
-    bgSelect.value = sessionStorage.getItem('chosenBG') || '';
-    setBackgroundImage();
-    bgSelect.addEventListener('change', function() {
-      sessionStorage.setItem('chosenBG', bgSelect.value);
-    });
-  } else {
-    setBackgroundImage();
-  }
+  // On page load, update to the default selected value
+  setBackgroundImage();
 });
