@@ -2,95 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Winner Draw App</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body { font-family: system-ui,sans-serif; background:#fff; margin:0; }
-    .controls { max-width:600px; margin:32px auto; }
-    .modal-bg {
-      display:none; position:fixed;left:0;top:0;width:100vw;height:100vh;
-      background:rgba(0,0,0,0.3);z-index:100;justify-content:center;align-items:center;
-    }
-    .modal {
-      background:#fff;box-shadow:0 6px 40px #0004;padding:2em 2em;border-radius:18px;
-      max-width:90vw;min-width:220px;text-align:center;position:relative;
-    }
-    .winner-name { font-size:2.3em;font-weight:bold;margin:18px 0; }
-    .close-btn {
-      position:absolute;top:10px;right:10px;background:#222;color:#fff;border:none;
-      border-radius:14px;font-size:1em;padding:5px 15px;cursor:pointer;
-    }
-    .redraw-btn {
-      margin-top:18px;background:#111;color:#fff;border:none;border-radius:20px;
-      font-size:1.2em;padding:8px 20px;cursor:pointer;
-    }
-    .redraw-btn:disabled { opacity:0.4;cursor:not-allowed; }
-  </style>
+  <title>Winner - Test Page</title>
 </head>
 <body>
-  <div class="controls">
-    <label>Page Title:
-      <select id="title-select">
-        <option>No Title</option>
-        <option>Test Draw</option>
-      </select>
-    </label>
-    <br><br>
-    <textarea id="name-list" rows="3" style="width:100%;">Alice
-Bob
-Charlie</textarea><br>
-    <button id="start-btn">Start</button>
-  </div>
-  <div id="modal-bg" class="modal-bg">
-    <div class="modal">
-      <button class="close-btn" onclick="closeModal()">Close</button>
-      <div id="modal-title" style="font-size:1.4em;font-weight:bold"></div>
-      <div style="font-size:1.1em;margin-top:8px;">Winner</div>
-      <div class="winner-name" id="winner-name"></div>
-      <button class="redraw-btn" id="redraw-btn">Redraw</button>
-    </div>
-  </div>
-  <script>
-    const $titleSelect = document.getElementById('title-select');
-    const $nameList = document.getElementById('name-list');
-    const $startBtn = document.getElementById('start-btn');
-    const $modalBg = document.getElementById('modal-bg');
-    const $winnerName = document.getElementById('winner-name');
-    const $modalTitle = document.getElementById('modal-title');
-    const $redrawBtn = document.getElementById('redraw-btn');
-    let names = [];
-    let lastWinner = null;
-
-    function syncNames() {
-      names = $nameList.value.split('\n').map(x=>x.trim()).filter(Boolean);
-    }
-
-    function showModal(winner) {
-      $winnerName.textContent = winner;
-      $modalTitle.textContent = $titleSelect.value !== "No Title" ? $titleSelect.value : '';
-      $modalBg.style.display = 'flex';
-      $redrawBtn.disabled = names.length < 2;
-    }
-    function closeModal() { $modalBg.style.display = 'none'; }
-
-    function pickWinner() {
-      syncNames();
-      if (names.length < 2) { alert("2+ names required"); return; }
-      const idx = Math.floor(Math.random() * names.length);
-      lastWinner = names[idx];
-      showModal(lastWinner);
-    }
-    function redrawWinner() {
-      names = names.filter(x=>x !== lastWinner);
-      $nameList.value = names.join('\n');
-      pickWinner();
-    }
-    $startBtn.onclick = pickWinner;
-    $redrawBtn.onclick = redrawWinner;
-    window.closeModal = closeModal; // for inline onclick
-
-    // Optional: close modal when clicking outside
-    $modalBg.onclick = e => { if (e.target === $modalBg) closeModal(); };
-  </script>
+  <h1>Welcome to Winner</h1>
+  <p>If you see this page, GitHub Pages is working!</p>
+  <h2>Sample Images:</h2>
+  <img src="images/20beaches_background.jpg" alt="20beaches" width="300">
+  <img src="images/chucky_background.png" alt="Chucky" width="300">
 </body>
 </html>
