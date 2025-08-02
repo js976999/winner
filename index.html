@@ -7,12 +7,25 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <div id="background-layer"></div>
   <header>
     <h1>Welcome to Winner</h1>
     <nav>
       <a href="index.html" class="active">Home</a>
       <a href="winners.html">Winners</a>
     </nav>
+    <div class="bg-select-row">
+      <label for="bg-select"><b>Choose a background:</b></label>
+      <select id="bg-select">
+        <option value="">No background</option>
+        <option value="images/20beaches_background.jpg">20 Beaches</option>
+        <option value="images/22beaches_background.jpg">22 Beaches</option>
+        <option value="images/chucky_background.png">Chucky</option>
+        <option value="images/raceone_background.png">Race One</option>
+        <option value="images/sss_background.png">SSS</option>
+        <option value="images/warw_background.png">Warw</option>
+      </select>
+    </div>
   </header>
   <main>
     <p>If you see this page, GitHub Pages is working!</p>
@@ -25,5 +38,6 @@
   <footer>
     <p>&copy; 2025 Winner | Powered by GitHub Pages</p>
   </footer>
+  <script src="background.js"></script>
 </body>
 </html>
