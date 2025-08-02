@@ -3,6 +3,29 @@ body {
   margin: 0;
   background: #f3f6fa;
   color: #222;
+  position: relative;
+  min-height: 100vh;
+  z-index: 0;
+}
+
+#background-layer {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 0;
+  opacity: 0.18;
+  pointer-events: none;
+  background: none;
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: contain;
+  transition: background-image 0.3s, opacity 0.3s;
+}
+
+header, main, footer {
+  position: relative;
+  z-index: 1;
 }
 
 header {
@@ -36,6 +59,22 @@ nav a {
 
 nav a.active, nav a:hover {
   background: #1565c0;
+}
+
+.bg-select-row {
+  margin: 1em 0 0.2em 0;
+}
+
+.bg-select-row label {
+  margin-right: 0.7em;
+  color: #fff;
+}
+
+.bg-select-row select {
+  padding: 0.3em 0.7em;
+  font-size: 1em;
+  border-radius: 5px;
+  border: 1px solid #1565c0;
 }
 
 main {
