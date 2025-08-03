@@ -1,6 +1,8 @@
 document.addEventListener('DOMContentLoaded', function() {
   const bgSelect = document.getElementById('bg-select');
   const bgLayer = document.getElementById('background-layer');
+  const opacitySlider = document.getElementById('bg-opacity');
+  const opacityValue = document.getElementById('bg-opacity-value');
 
   function setBackgroundImage() {
     const img = bgSelect.value;
@@ -11,9 +13,16 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // Ensure the background updates on change
-  bgSelect.addEventListener('change', setBackgroundImage);
+  function setOpacity() {
+    const val = opacitySlider.value;
+    bgLayer.style.opacity = (val / 100).toString();
+    opacityValue.textContent = val + '%';
+  }
 
-  // On page load, update to the default selected value
+  bgSelect.addEventListener('change', setBackgroundImage);
+  opacitySlider.addEventListener('input', setOpacity);
+
+  // On load, update to defaults
   setBackgroundImage();
+  setOpacity();
 });
