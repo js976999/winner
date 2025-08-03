@@ -1,28 +1,20 @@
 document.addEventListener('DOMContentLoaded', function() {
   const bgSelect = document.getElementById('bg-select');
   const bgLayer = document.getElementById('background-layer');
-  const opacitySlider = document.getElementById('bg-opacity');
-  const opacityValue = document.getElementById('bg-opacity-value');
 
   function setBackgroundImage() {
     const img = bgSelect.value;
     if (!img) {
       bgLayer.style.backgroundImage = 'none';
+      bgLayer.style.opacity = '0.4'; // default opacity
     } else {
       bgLayer.style.backgroundImage = `url('${img}')`;
+      bgLayer.style.opacity = '0.4'; // default opacity
     }
   }
 
-  function setOpacity() {
-    const val = opacitySlider.value;
-    bgLayer.style.opacity = (val / 100).toString();
-    opacityValue.textContent = val + '%';
-  }
-
   bgSelect.addEventListener('change', setBackgroundImage);
-  opacitySlider.addEventListener('input', setOpacity);
 
-  // On load, update to defaults
+  // On load, update to default
   setBackgroundImage();
-  setOpacity();
 });
